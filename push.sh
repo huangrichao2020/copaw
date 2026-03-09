@@ -39,7 +39,7 @@ echo ""
 echo "🔄 推送到 Gitee..."
 echo "💡 提示：如果提示认证失败，请输入 Gitee 账号密码"
 echo "   账号：$GITEE_USER"
-echo "   密码：huang.123581321"
+echo "   密码：tingchi2021"
 echo ""
 
 if git push -u gitee main; then

@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
 # 获取真实 Tushare 数据并更新 api_data.json
+# 如果获取失败，自动使用备用数据
 
 import sys
+import os
 import json
 sys.path.insert(0, '/Users/tingchi/.copaw')
+
+def get_script_dir():
+    """获取脚本所在目录"""
+    return os.path.dirname(os.path.abspath(__file__))
+
+def fallback_data(output_path):
+    """使用备用数据"""
+    print("⚠️  使用备用数据...")
+    os.system(f"python3 '{get_script_dir()}/generate_data.py'")
 
 try:
     import tushare as ts
@@ -18,17 +29,20 @@ try:
     print("📊 获取 Tushare 数据...")
     
     # 1. 获取最新交易日
-    from datetime import datetime
     today = datetime.now().strftime('%Y%m%d')
     five_days_ago = (datetime.now() - timedelta(days=5)).strftime('%Y%m%d')
     
-    trade_cal = pro.trade_cal(exchange='SSE', start_date=five_days_ago, end_date=today, is_open='1')
-    if trade_cal.empty:
-        print("⚠️ 无交易日数据，使用示例数据")
-        # 使用示例数据
-        latest_date = '20260306'
-    else:
+    try:
+        trade_cal = pro.trade_cal(exchange='SSE', start_date=five_days_ago, end_date=today, is_open='1')
+        if trade_cal.empty:
+            print("⚠️  无交易日数据")
+            fallback_data(None)
+            sys.exit(0)
         latest_date = trade_cal['cal_date'].iloc[0]
+    except Exception as e:
+        print(f"⚠️  获取交易日失败：{e}")
+        fallback_data(None)
+        sys.exit(0)
     
     print(f"✅ 交易日：{latest_date}")
     
@@ -37,12 +51,14 @@ try:
     try:
         daily_info = pro.daily(trade_date=latest_date)
     except Exception as e:
-        print(f"⚠️ 获取失败：{e}，使用示例数据")
-        daily_info = pd.DataFrame()
+        print(f"⚠️  获取失败：{e}")
+        fallback_data(None)
+        sys.exit(0)
     
     if daily_info.empty:
         print("❌ 无日线数据")
-        sys.exit(1)
+        fallback_data(None)
+        sys.exit(0)
     
     # 计算涨跌家数
     up_count = len(daily_info[daily_info['pct_chg'] > 0])
@@ -177,15 +193,19 @@ try:
     }
     
     # 8. 写入文件
-    output_path = '/Users/tingchi/.copaw/projects/stock_report/api_data.json'
+    output_path = os.path.join(get_script_dir(), 'api_data.json')
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
     
     print(f"\n✅ 数据已保存到：{output_path}")
     print(f"📄 生成时间：{report['generate_time']}")
     
+except ImportError as e:
+    print(f"⚠️  缺少依赖：{e}")
+    print("💡 请运行：pip3 install tushare pandas")
+    fallback_data(None)
 except Exception as e:
     print(f"❌ 错误：{e}")
     import traceback
     traceback.print_exc()
-    sys.exit(1)
+    fallback_data(None)

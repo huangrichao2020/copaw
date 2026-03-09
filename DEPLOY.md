@@ -16,7 +16,7 @@
 ### 1. 登录 Gitee
 访问：https://gitee.com/login
 - 账号：`huangrichao`
-- 密码：`huang.123581321`
+- 密码：`tingchi2021`
 
 ### 2. 创建仓库
 访问：https://gitee.com/new
